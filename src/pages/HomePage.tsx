@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getAccommodationList } from '../api/accommodationApi';
+import { getCategories, getTopRegions } from '../api/categoryApi';
 import type { AccommodationListItem, AccommodationListParams } from '../types/accommodation';
+import type { Category, RegionResponse } from '../types/category';
 import Header from '../components/common/Header';
 import styles from './HomePage.module.css';
 
@@ -21,6 +23,18 @@ export default function HomePage() {
   const [keyword, setKeyword] = useState('');
   const [searchInput, setSearchInput] = useState('');
 
+  // 필터 상태
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [selectedRegion, setSelectedRegion] = useState<number | null>(null);
+  const [filterPet, setFilterPet] = useState(false);
+  const [filterWifi, setFilterWifi] = useState(false);
+  const [filterParking, setFilterParking] = useState(false);
+  const [filterBbq, setFilterBbq] = useState(false);
+
+  // 카테고리 / 지역 데이터
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [regions, setRegions] = useState<RegionResponse[]>([]);
+
   // 로그인한 사용자 이메일 (localStorage에서)
   const userEmail = localStorage.getItem('accessToken')
     ? (() => {
@@ -34,6 +48,16 @@ export default function HomePage() {
         }
       })()
     : null;
+
+  // 카테고리 + 상위 지역 초기 로딩
+  useEffect(() => {
+    Promise.all([getCategories(), getTopRegions()])
+      .then(([cats, regs]) => {
+        setCategories(cats);
+        setRegions(regs);
+      })
+      .catch(() => {/* 필터 로딩 실패는 조용히 무시 */});
+  }, []);
 
   const fetchAccommodations = async (params: AccommodationListParams = {}) => {
     setIsLoading(true);
@@ -49,16 +73,44 @@ export default function HomePage() {
     }
   };
 
-  // 초기 로딩 + 페이지/검색어 변경 시
+  // 초기 로딩 + 필터/검색어/페이지 변경 시
   useEffect(() => {
-    fetchAccommodations({ page: currentPage, keyword: keyword || undefined });
-  }, [currentPage, keyword]);
+    fetchAccommodations({
+      page: currentPage,
+      keyword: keyword || undefined,
+      categoryId: selectedCategory ?? undefined,
+      regionId: selectedRegion ?? undefined,
+      petAllowed: filterPet || undefined,
+      hasWifi: filterWifi || undefined,
+      parkingAvailable: filterParking || undefined,
+      hasBbq: filterBbq || undefined,
+    });
+  }, [currentPage, keyword, selectedCategory, selectedRegion, filterPet, filterWifi, filterParking, filterBbq]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setCurrentPage(0);
     setKeyword(searchInput.trim());
   };
+
+  const handleFilterChange = () => {
+    setCurrentPage(0);
+  };
+
+  const handleResetFilters = () => {
+    setSelectedCategory(null);
+    setSelectedRegion(null);
+    setFilterPet(false);
+    setFilterWifi(false);
+    setFilterParking(false);
+    setFilterBbq(false);
+    setKeyword('');
+    setSearchInput('');
+    setCurrentPage(0);
+  };
+
+  const hasActiveFilter = !!keyword || selectedCategory !== null || selectedRegion !== null
+    || filterPet || filterWifi || filterParking || filterBbq;
 
   return (
     <div className={styles.page}>
@@ -77,22 +129,91 @@ export default function HomePage() {
             ? `${userEmail} · 전국의 빈 방을 한 곳에서`
             : '전국의 빈 방을 한 곳에서'}
         </p>
+
+        {/* ── 검색 + 필터 ── */}
+        <div className={styles.searchSection}>
+          {/* 검색바 */}
+          <form className={styles.searchBar} onSubmit={handleSearch}>
+            <span className={styles.searchIcon}>🔍</span>
+            <input
+              type="text"
+              className={styles.searchInput}
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              placeholder="숙소명, 지역명으로 검색..."
+            />
+            <button type="submit" className={styles.searchButton}>검색</button>
+          </form>
+
+          {/* 필터 행 */}
+          <div className={styles.filterRow}>
+            {/* 카테고리 */}
+            <select
+              className={styles.filterSelect}
+              value={selectedCategory ?? ''}
+              onChange={e => {
+                setSelectedCategory(e.target.value ? Number(e.target.value) : null);
+                handleFilterChange();
+              }}
+            >
+              <option value="">카테고리 전체</option>
+              {categories.map(c => (
+                <option key={c.categoryId} value={c.categoryId}>{c.name}</option>
+              ))}
+            </select>
+
+            {/* 지역 */}
+            <select
+              className={styles.filterSelect}
+              value={selectedRegion ?? ''}
+              onChange={e => {
+                setSelectedRegion(e.target.value ? Number(e.target.value) : null);
+                handleFilterChange();
+              }}
+            >
+              <option value="">지역 전체</option>
+              {regions.map(r => (
+                <option key={r.regionId} value={r.regionId}>{r.name}</option>
+              ))}
+            </select>
+
+            {/* 시설 토글 */}
+            {([
+              { key: 'pet',     label: '🐾 반려동물', state: filterPet,     setter: setFilterPet },
+              { key: 'wifi',    label: '📶 Wi-Fi',    state: filterWifi,    setter: setFilterWifi },
+              { key: 'parking', label: '🚗 주차',     state: filterParking, setter: setFilterParking },
+              { key: 'bbq',     label: '🔥 BBQ',      state: filterBbq,     setter: setFilterBbq },
+            ] as const).map(({ key, label, state, setter }) => (
+              <button
+                key={key}
+                type="button"
+                className={`${styles.filterChip} ${state ? styles.filterChipActive : ''}`}
+                onClick={() => { setter(v => !v); handleFilterChange(); }}
+              >
+                {label}
+              </button>
+            ))}
+
+            {/* 초기화 버튼 (활성 필터 있을 때만) */}
+            {hasActiveFilter && (
+              <button className={styles.resetBtn} onClick={handleResetFilters}>
+                초기화 ✕
+              </button>
+            )}
+          </div>
+        </div>
       </section>
 
       {/* ── 메인 컨텐츠 ── */}
       <main className={styles.main}>
         {/* 검색 결과 헤더 */}
-        {keyword && (
+        {hasActiveFilter && (
           <div className={styles.searchResultBar}>
             <span>
-              <strong>"{keyword}"</strong> 검색 결과
+              {keyword && <><strong>"{keyword}"</strong> 검색{' '}</>}
+              {(selectedCategory !== null || selectedRegion !== null || filterPet || filterWifi || filterParking || filterBbq)
+                && '필터 적용 중'}
             </span>
-            <button
-              className={styles.clearSearch}
-              onClick={() => { setKeyword(''); setSearchInput(''); setCurrentPage(0); }}
-            >
-              검색 초기화 ✕
-            </button>
           </div>
         )}
 
