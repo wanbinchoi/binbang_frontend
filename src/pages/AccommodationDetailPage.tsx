@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/common/Header';
 import { getAccommodationDetail } from '../api/accommodationApi';
 import { createReservation } from '../api/reservationApi';
+import { toggleWishlist } from '../api/wishlistApi';
 import type { AccommodationDetail } from '../types/accommodation';
 import styles from './AccommodationDetailPage.module.css';
 
@@ -25,6 +26,10 @@ export default function AccommodationDetailPage() {
 
   // ── 이미지 슬라이더 상태 ──
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // ── 위시리스트 상태 ──
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
 
   // ── 예약 폼 상태 ──
   const [checkIn, setCheckIn]     = useState('');
@@ -89,6 +94,26 @@ export default function AccommodationDetailPage() {
       setReserveError(msg);
     } finally {
       setReserving(false);
+    }
+  };
+
+  // ── 위시리스트 토글 ──
+  const handleWishlistToggle = async () => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+    if (!accommodation) return;
+
+    try {
+      setWishlistLoading(true);
+      const result = await toggleWishlist(accommodation.accommodationId);
+      setIsWishlisted(result.isWishlisted);
+    } catch {
+      alert('위시리스트 처리 중 오류가 발생했습니다.');
+    } finally {
+      setWishlistLoading(false);
     }
   };
 
@@ -188,13 +213,22 @@ export default function AccommodationDetailPage() {
         {/* ── 왼쪽: 숙소 정보 ── */}
         <main className={styles.main}>
 
-          {/* 헤더 정보 */}
           <div className={styles.infoHeader}>
             <div className={styles.badges}>
               <span className={styles.badge}>{accommodation.categoryName}</span>
               <span className={styles.badge}>{accommodation.regionName}</span>
             </div>
-            <h1 className={styles.title}>{accommodation.name}</h1>
+            <div className={styles.titleRow}>
+              <h1 className={styles.title}>{accommodation.name}</h1>
+              <button
+                className={`${styles.heartBtn} ${isWishlisted ? styles.heartBtnActive : ''}`}
+                onClick={handleWishlistToggle}
+                disabled={wishlistLoading}
+                title={isWishlisted ? '위시리스트에서 제거' : '위시리스트에 추가'}
+              >
+                {isWishlisted ? '❤️' : '🩶'}
+              </button>
+            </div>
             <p className={styles.address}>📍 {accommodation.address}</p>
             <p className={styles.host}>호스트: <strong>{accommodation.hostName}</strong></p>
           </div>

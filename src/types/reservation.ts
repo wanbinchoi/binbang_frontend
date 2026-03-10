@@ -35,3 +35,18 @@ export interface ReservationResponse {
   guestEmail: string;
   guestPhone: string;
 }
+
+// GET /api/reservation/my 응답 (목록용 간략 버전)
+export interface ReservationListResponse {
+  reservationId: number;
+  checkInDate: string;
+  checkOutDate: string;
+  personnel: number;
+  totalPrice: number;
+  status: ReservationStatus;
+  reservedAt: string;
+  accommodationId: number;
+  accommodationName: string;
+  hostName: string;
+  guestName: string;
+}

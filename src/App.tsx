@@ -7,8 +7,8 @@ import AccommodationDetailPage from './pages/AccommodationDetailPage';
 import ChatListPage from './pages/ChatListPage';
 import ChatRoomPage from './pages/ChatRoomPage';
 import OAuth2RedirectPage from './pages/OAuth2RedirectPage';
-const MyReservationsPage = () => <div style={{ padding: '2rem' }}><h1>📋 내 예약</h1></div>;
-const WishlistPage = () => <div style={{ padding: '2rem' }}><h1>❤️ 위시리스트</h1></div>;
+import MyReservationsPage from './pages/MyReservationsPage';
+import WishlistPage from './pages/WishlistPage';
 
 // 로그인이 필요한 라우트 보호
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {

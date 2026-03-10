@@ -583,3 +583,32 @@
   .dateInputGroup { grid-template-columns: 1fr; }
   .dateField:first-child { border-right: none; border-bottom: 1px solid var(--color-border); }
 }
+
+/* 제목 + 하트 버튼 행 */
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* 하트 버튼 */
+.heartBtn {
+  background: none;
+  border: none;
+  font-size: 1.75rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 50%;
+  transition: transform 0.15s ease;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.heartBtn:hover:not(:disabled) {
+  transform: scale(1.2);
+}
+
+.heartBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
